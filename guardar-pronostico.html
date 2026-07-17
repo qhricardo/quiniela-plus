@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Pronósticos</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .partido{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px;gap:10px;
+  }
+  .partido .equipo{display:flex;flex-direction:column;align-items:center;gap:6px;width:40%;}
+  .partido .equipo img{width:36px;height:36px;object-fit:contain;}
+  .partido .equipo span{font-size:12.5px;text-align:center;}
+  .partido .marcador{display:flex;align-items:center;gap:8px;}
+  .partido .marcador input{
+    width:44px;height:44px;text-align:center;font-size:18px;font-weight:700;
+    border-radius:var(--radius-sm);border:1px solid var(--card-borde);
+    background:rgba(255,255,255,.04);color:var(--texto);
+  }
+  .partido.bloqueado input{opacity:.5;pointer-events:none;}
+  .partido .hora{font-size:11px;color:var(--texto-tenue);margin-top:4px;text-align:center;}
+  .barra-guardar{
+    position:sticky;bottom:70px;
+    display:flex;justify-content:center;
+    padding:10px 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">⚽ Pronósticos</div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 140px;">
+  <div class="titulo-seccion" id="nombre-sala">Cargando sala…</div>
+  <div id="lista-partidos">
+    <div class="estado-vacio tarjeta">
+      <div class="icono">⏳</div>
+      <p>Cargando los próximos partidos…</p>
+    </div>
+  </div>
+</main>
+
+<div class="barra-guardar">
+  <button class="btn btn-primario" id="btn-guardar" style="width:92%;max-width:1000px">Guardar mis pronósticos</button>
+</div>
+
+<nav class="tabbar">
+  <a href="interfaz.html">🏠<span>Inicio</span></a>
+  <a href="sala.html" class="activo">🎟️<span>Salas</span></a>
+  <a href="live.html">🔴<span>En vivo</span></a>
+  <a href="compra.html">💳<span>Créditos</span></a>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  const salaId = new URLSearchParams(location.search).get("sala");
+  let usuarioActual = null;
+  let partidosCache = [];
+
+  requerirSesion(async (user, datos) => {
+    usuarioActual = user;
+    if (!salaId) {
+      document.getElementById("nombre-sala").textContent = "Selecciona una sala primero";
+      document.getElementById("lista-partidos").innerHTML =
+        `<div class="estado-vacio tarjeta"><p>Entra desde <a href="sala.html" style="color:var(--oro)">Mis salas</a> para pronosticar.</p></div>`;
+      return;
+    }
+    try {
+      const salaDoc = await db.collection("salas").doc(salaId).get();
+      document.getElementById("nombre-sala").textContent = salaDoc.exists ? salaDoc.data().nombre : "Sala";
+    } catch { /* no crítico */ }
+    cargarPartidos(user.uid);
+  });
+
+  async function cargarPartidos(uid) {
+    try {
+      // Próximos partidos de la jornada (backend expone esta ruta cacheada — ver server.js)
+      const res = await fetch("/api/proximos-partidos");
+      partidosCache = await res.json();
+
+      const pronDoc = await db.collection("pronosticos").doc(`${salaId}_${uid}`).get();
+      const guardados = pronDoc.exists ? pronDoc.data().marcadores || {} : {};
+
+      const cont = document.getElementById("lista-partidos");
+      if (!partidosCache.length) {
+        cont.innerHTML = `<div class="estado-vacio tarjeta"><div class="icono">📅</div><h3>No hay partidos próximos</h3><p>Vuelve cuando se anuncie la siguiente jornada.</p></div>`;
+        return;
+      }
+      cont.innerHTML = partidosCache.map(p => {
+        const yaEmpezo = new Date(p.fechaHora) <= new Date();
+        const g = guardados[p.id] || {};
+        return `
+        <div class="partido tarjeta ${yaEmpezo ? "bloqueado" : ""}" data-id="${p.id}" style="margin-bottom:12px;">
+          <div class="equipo"><img src="${p.local.escudo}" alt=""><span>${p.local.nombre}</span></div>
+          <div class="marcador">
+            <input type="number" min="0" max="20" value="${g.local ?? ""}" data-campo="local" ${yaEmpezo ? "disabled" : ""}>
+            <span>—</span>
+            <input type="number" min="0" max="20" value="${g.visita ?? ""}" data-campo="visita" ${yaEmpezo ? "disabled" : ""}>
+          </div>
+          <div class="equipo"><img src="${p.visitante.escudo}" alt=""><span>${p.visitante.nombre}</span></div>
+        </div>
+        <p class="hora" style="text-align:center;margin:-6px 0 0">${yaEmpezo ? "🔒 Partido ya iniciado" : "Cierra: " + new Date(p.fechaHora).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+      `;
+      }).join("");
+    } catch (err) {
+      console.error(err);
+      document.getElementById("lista-partidos").innerHTML =
+        `<div class="estado-vacio tarjeta"><p>No se pudieron cargar los partidos. Intenta más tarde.</p></div>`;
+    }
+  }
+
+  document.getElementById("btn-guardar").addEventListener("click", async () => {
+    if (!salaId || !usuarioActual) return;
+    const marcadores = {};
+    document.querySelectorAll(".partido[data-id]").forEach(div => {
+      const id = div.dataset.id;
+      const local = div.querySelector('[data-campo="local"]').value;
+      const visita = div.querySelector('[data-campo="visita"]').value;
+      if (local !== "" && visita !== "") {
+        marcadores[id] = { local: Number(local), visita: Number(visita) };
+      }
+    });
+    if (!Object.keys(marcadores).length) {
+      mostrarToast("Llena al menos un marcador");
+      return;
+    }
+    try {
+      await db.collection("pronosticos").doc(`${salaId}_${usuarioActual.uid}`).set({
+        salaId,
+        uid: usuarioActual.uid,
+        marcadores,
+        actualizadoAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      mostrarToast("Pronósticos guardados ✔");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("No se pudo guardar, intenta de nuevo");
+    }
+  });
+</script>
+</body>
+</html>

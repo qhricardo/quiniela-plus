@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Completa tu perfil</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .pantalla-registro{
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .caja{width:100%;max-width:380px;}
+  .avatar-actual{
+    width:76px;height:76px;border-radius:50%;
+    display:block;margin:0 auto 18px;
+    border:3px solid var(--verde-400);
+    object-fit:cover;background:var(--card);
+  }
+  h1{font-size:20px;text-align:center;margin:0 0 6px;}
+  p.sub{text-align:center;color:var(--texto-sec);font-size:14px;margin:0 0 26px;}
+</style>
+</head>
+<body>
+
+<div class="pantalla-registro">
+  <div class="caja tarjeta">
+    <img id="avatar-preview" class="avatar-actual" src="" alt="Tu avatar" />
+    <h1>¿Cómo te decimos en tus salas?</h1>
+    <p class="sub">Este apodo es lo que verán tus amigos en la tabla de posiciones.</p>
+
+    <form id="form-perfil">
+      <div class="campo">
+        <label for="apodo">Apodo</label>
+        <input type="text" id="apodo" maxlength="20" placeholder="Ej. ElCuau10" required />
+      </div>
+      <button type="submit" class="btn btn-primario btn-bloque" id="btn-guardar">Guardar y continuar</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requerirSesion((user, datos) => {
+    document.getElementById("avatar-preview").src =
+      user.photoURL || "https://api.dicebear.com/7.x/initials/svg?seed=" + encodeURIComponent(user.displayName || "Q");
+    if (datos && datos.apodo) document.getElementById("apodo").value = datos.apodo;
+  });
+
+  document.getElementById("form-perfil").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const apodo = document.getElementById("apodo").value.trim();
+    if (apodo.length < 3) {
+      mostrarToast("El apodo debe tener al menos 3 letras");
+      return;
+    }
+    const btn = document.getElementById("btn-guardar");
+    btn.disabled = true;
+    btn.textContent = "Guardando…";
+    try {
+      const user = auth.currentUser;
+      await db.collection("users").doc(user.uid).update({ apodo });
+      location.href = "interfaz.html";
+    } catch (err) {
+      console.error(err);
+      mostrarToast("No se pudo guardar, intenta de nuevo");
+      btn.disabled = false;
+      btn.textContent = "Guardar y continuar";
+    }
+  });
+</script>
+</body>
+</html>

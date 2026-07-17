@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// ============================================================
+// Reglas de Firestore — súbelas en Firebase Console → Firestore → Reglas,
+// o con `firebase deploy --only firestore:rules` si usas Firebase CLI.
+//
+// Idea central: el campo "creditos" SOLO lo puede tocar el backend
+// (que usa firebase-admin y se salta estas reglas). Un usuario puede
+// leer y editar su propio perfil, pero nunca su propio saldo.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+                    // El usuario puede editar su perfil (apodo, onboarding visto),
+                    // pero JAMÁS su propio saldo de créditos ni sus banderas de pago.
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['creditos', 'pagosAplicados', 'referidoYaProcesado', 'invitadoPor']);
+    }
+
+    match /salas/{salaId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      // Solo se puede modificar para unirse (agregar el propio uid a "miembros").
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros'])
+                    && request.resource.data.miembros.hasAll(resource.data.miembros);
+    }
+
+    match /pronosticos/{docId} {
+      // El id del documento es "{salaId}_{uid}"; cada quien solo toca el suyo.
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && docId.matches('.*_' + request.auth.uid);
+    }
+  }
+}

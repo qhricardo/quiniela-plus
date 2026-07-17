@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Resultados</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .resultado{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
+  .resultado .equipos{display:flex;align-items:center;gap:10px;font-size:14px;}
+  .resultado .equipos img{width:24px;height:24px;object-fit:contain;}
+  .resultado .marcador-final{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--oro);}
+  .resultado .acierto{font-size:11px;margin-top:3px;}
+  .resultado .acierto.si{color:var(--verde-300);}
+  .resultado .acierto.no{color:var(--texto-tenue);}
+  .tabla-posiciones-sala{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .tabla-posiciones-sala th{text-align:left;padding:8px;color:var(--texto-sec);font-weight:500;font-size:12px;text-transform:uppercase;}
+  .tabla-posiciones-sala td{padding:8px;border-top:1px solid var(--card-borde);}
+  .tabla-posiciones-sala tr.yo{background:rgba(255,209,102,.08);}
+  select#selector-sala{max-width:280px;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">📊 Resultados</div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 100px;">
+
+  <div class="campo" style="max-width:280px;">
+    <label for="selector-sala">Sala</label>
+    <select id="selector-sala"><option>Cargando salas…</option></select>
+  </div>
+
+  <div class="titulo-seccion">Tabla de tu sala</div>
+  <div class="tarjeta" style="padding:8px 12px;">
+    <table class="tabla-posiciones-sala" id="tabla-sala">
+      <thead><tr><th>#</th><th>Jugador</th><th>Aciertos</th><th>Créditos</th></tr></thead>
+      <tbody id="tabla-sala-body"><tr><td colspan="4">Selecciona una sala</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="titulo-seccion">Últimos resultados</div>
+  <div id="lista-resultados">
+    <div class="estado-vacio tarjeta"><p>Selecciona una sala para ver tus aciertos.</p></div>
+  </div>
+
+</main>
+
+<nav class="tabbar">
+  <a href="interfaz.html">🏠<span>Inicio</span></a>
+  <a href="sala.html">🎟️<span>Salas</span></a>
+  <a href="live.html">🔴<span>En vivo</span></a>
+  <a href="compra.html">💳<span>Créditos</span></a>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  let usuarioActual = null;
+
+  requerirSesion((user) => {
+    usuarioActual = user;
+    cargarSelectorSalas(user.uid);
+  });
+
+  async function cargarSelectorSalas(uid) {
+    const sel = document.getElementById("selector-sala");
+    const snap = await db.collection("salas").where("miembros", "array-contains", uid).get();
+    if (snap.empty) {
+      sel.innerHTML = `<option>No estás en ninguna sala</option>`;
+      return;
+    }
+    sel.innerHTML = snap.docs.map(d => `<option value="${d.id}">${d.data().nombre}</option>`).join("");
+    sel.addEventListener("change", () => cargarDatosSala(sel.value));
+    cargarDatosSala(sel.value);
+  }
+
+  async function cargarDatosSala(salaId) {
+    if (!salaId) return;
+    // Tabla de posiciones de la sala: la calcula el backend a partir de
+    // pronósticos + resultados oficiales (ver server.js /api/tabla-sala/:id)
+    try {
+      const res = await fetch(`/api/tabla-sala/${salaId}`);
+      const { posiciones, resultados } = await res.json();
+
+      document.getElementById("tabla-sala-body").innerHTML = posiciones.map((p, i) => `
+        <tr class="${p.uid === usuarioActual.uid ? "yo" : ""}">
+          <td>${i + 1}</td><td>${p.apodo}</td><td>${p.aciertos}</td><td>${p.creditos}</td>
+        </tr>`).join("") || `<tr><td colspan="4">Aún no hay pronósticos calificados.</td></tr>`;
+
+      document.getElementById("lista-resultados").innerHTML = resultados.length
+        ? resultados.map(r => `
+          <div class="resultado tarjeta" style="margin-bottom:10px;">
+            <div class="equipos"><img src="${r.local.escudo}" alt="">${r.local.nombre}</div>
+            <div style="text-align:center">
+              <div class="marcador-final">${r.golesLocal} - ${r.golesVisita}</div>
+              <div class="acierto ${r.acerte ? "si" : "no"}">${r.acerte ? "✔ Acertaste" : "Tu pronóstico: " + (r.miPronostico ?? "—")}</div>
+            </div>
+            <div class="equipos">${r.visitante.nombre}<img src="${r.visitante.escudo}" alt=""></div>
+          </div>`).join("")
+        : `<div class="estado-vacio tarjeta"><p>Todavía no hay partidos terminados en esta jornada.</p></div>`;
+    } catch (err) {
+      console.error(err);
+      document.getElementById("lista-resultados").innerHTML =
+        `<div class="estado-vacio tarjeta"><p>No se pudieron cargar los resultados.</p></div>`;
+    }
+  }
+</script>
+</body>
+</html>

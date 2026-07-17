@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Comprar créditos</title>
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+<style>
+  .paquetes{display:flex;flex-direction:column;gap:12px;margin-top:18px;}
+  .paquete{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px;cursor:pointer;border:2px solid transparent;
+  }
+  .paquete.seleccionado{border-color:var(--oro);}
+  .paquete .izq{display:flex;align-items:center;gap:14px;}
+  .paquete .izq .num{font-family:var(--font-display);font-size:24px;color:var(--oro);}
+  .paquete .precio{font-weight:600;}
+  .paquete .destacado{position:absolute;}
+  .nota-seguridad{
+    margin-top:20px;font-size:12px;color:var(--texto-tenue);
+    display:flex;gap:8px;align-items:flex-start;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">💳 Comprar créditos</div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 100px;max-width:460px;">
+
+  <p style="color:var(--texto-sec);font-size:14px;">Los créditos se usan para desbloquear salas y pronósticos extra. 1 crédito = $1 MXN.</p>
+
+  <div class="paquetes" id="paquetes">
+    <!-- Los precios NO se calculan aquí: solo se muestran los del catálogo público.
+         El id del paquete es lo único que viaja al servidor; el servidor
+         vuelve a calcular el precio real antes de cobrar. -->
+    <div class="tarjeta paquete" data-id="p5">
+      <div class="izq"><span class="num">5</span><span>créditos</span></div>
+      <span class="precio">$5 MXN</span>
+    </div>
+    <div class="tarjeta paquete" data-id="p10">
+      <div class="izq"><span class="num">10</span><span>créditos</span></div>
+      <span class="precio">$10 MXN</span>
+    </div>
+    <div class="tarjeta paquete" data-id="p20">
+      <div class="izq"><span class="num">20</span><span>créditos</span></div>
+      <span class="precio">$20 MXN</span>
+    </div>
+  </div>
+
+  <button class="btn btn-primario btn-bloque" id="btn-pagar" style="margin-top:22px;" disabled>Selecciona un paquete</button>
+
+  <p class="nota-seguridad">🔒 El pago se procesa con Mercado Pago. Nunca compartimos tus datos de tarjeta; el precio final siempre lo valida nuestro servidor, no tu navegador.</p>
+
+</main>
+
+<nav class="tabbar">
+  <a href="interfaz.html">🏠<span>Inicio</span></a>
+  <a href="sala.html">🎟️<span>Salas</span></a>
+  <a href="live.html">🔴<span>En vivo</span></a>
+  <a href="compra.html" class="activo">💳<span>Créditos</span></a>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // ⚠️ Reemplaza con tu PUBLIC_KEY real de Mercado Pago (la pública, nunca la de acceso/privada).
+  const mp = new MercadoPago("TEST-XXXXXXXXXXXXXXXXXXXXXXXXX", { locale: "es-MX" });
+
+  let paqueteElegido = null;
+  let usuarioActual = null;
+
+  requerirSesion((user) => { usuarioActual = user; });
+
+  document.querySelectorAll(".paquete").forEach(el => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".paquete").forEach(p => p.classList.remove("seleccionado"));
+      el.classList.add("seleccionado");
+      paqueteElegido = el.dataset.id;
+      const btn = document.getElementById("btn-pagar");
+      btn.disabled = false;
+      btn.textContent = "💳 Pagar";
+    });
+  });
+
+  document.getElementById("btn-pagar").addEventListener("click", async () => {
+    if (!paqueteElegido || !usuarioActual) return;
+    const btn = document.getElementById("btn-pagar");
+    btn.disabled = true;
+    btn.textContent = "Creando pago…";
+    try {
+      // Enviamos el token de sesión de Firebase para que el servidor sepa
+      // QUIÉN eres de verdad (no un userId de texto libre) y el id del
+      // paquete (no el monto): el servidor decide el precio.
+      const token = await usuarioActual.getIdToken();
+      const res = await fetch("/crear-preferencia", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ paqueteId: paqueteElegido }),
+      });
+      const data = await res.json();
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        mostrarToast(data.error || "Error al crear el pago");
+        btn.disabled = false;
+        btn.textContent = "💳 Pagar";
+      }
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Error de conexión, intenta de nuevo");
+      btn.disabled = false;
+      btn.textContent = "💳 Pagar";
+    }
+  });
+</script>
+</body>
+</html>

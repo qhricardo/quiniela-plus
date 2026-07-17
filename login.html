@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Iniciar sesión</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .pantalla-login{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .caja{
+    width:100%;
+    max-width:360px;
+    text-align:center;
+  }
+  .caja .marca{
+    font-family:var(--font-display);
+    font-size:20px;
+    margin-bottom:6px;
+  }
+  .caja .marca b{color:var(--oro);}
+  .caja h1{
+    font-size:22px;
+    margin:18px 0 8px;
+  }
+  .caja p.sub{
+    color:var(--texto-sec);
+    font-size:14px;
+    margin:0 0 28px;
+  }
+  #btn-google{
+    background:#fff;
+    color:#1f1f1f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  #btn-google img{width:18px;height:18px;}
+  .aviso-referido{
+    margin-top:16px;
+    font-size:12px;
+    color:var(--verde-300);
+    background:rgba(0,168,107,.1);
+    border:1px solid rgba(0,168,107,.3);
+    padding:8px 12px;
+    border-radius:var(--radius-sm);
+  }
+  .legal-mini{
+    margin-top:28px;
+    font-size:11px;
+    color:var(--texto-tenue);
+  }
+  #estado-carga{display:none;color:var(--texto-sec);font-size:13px;margin-top:14px;}
+</style>
+</head>
+<body>
+
+<div class="pantalla-login">
+  <div class="caja">
+    <div class="marca">Quiniela <b>360</b></div>
+    <h1>Bienvenido de vuelta</h1>
+    <p class="sub">Entra con tu cuenta de Google, sin contraseñas que recordar.</p>
+
+    <button id="btn-google" class="btn btn-bloque">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="">
+      Entrar con Google
+    </button>
+
+    <p id="estado-carga">Entrando…</p>
+    <p id="aviso-referido" class="aviso-referido" hidden>🎁 Entras invitado por un amigo — le sumará un crédito cuando te registres.</p>
+
+    <p class="legal-mini">Al continuar aceptas que Quiniela360 es un juego entre amigos y que la compra de créditos es opcional.</p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  const siguienteDestino = params.get("next") || "interfaz.html";
+  const referidoPor = params.get("ref");
+
+  // Si venimos de un link de invitación, lo guardamos para que sobreviva
+  // aunque el usuario tarde en decidirse a loguearse.
+  if (referidoPor) {
+    sessionStorage.setItem("q360_ref", referidoPor);
+    document.getElementById("aviso-referido").hidden = false;
+  }
+
+  // Si ya hay sesión activa, no mostramos el login: mandamos directo.
+  auth.onAuthStateChanged((user) => {
+    if (user) location.href = siguienteDestino;
+  });
+
+  document.getElementById("btn-google").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-google");
+    boton.disabled = true;
+    document.getElementById("estado-carga").style.display = "block";
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+      const resultado = await firebase.auth().signInWithPopup(provider);
+      const user = resultado.user;
+      const refGuardado = sessionStorage.getItem("q360_ref");
+      const userRef = db.collection("users").doc(user.uid);
+      const snap = await userRef.get();
+
+      if (!snap.exists) {
+        // Usuario nuevo: créditos de bienvenida para que pueda jugar
+        // su primer pronóstico sin tener que pagar antes de entender la app.
+        await userRef.set({
+          uid: user.uid,
+          name: user.displayName || "Jugador",
+          email: user.email || "",
+          photoURL: user.photoURL || "",
+          creditos: 10,
+          creditosBienvenida: true,
+          invitadoPor: refGuardado || null,
+          onboardingVisto: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        // El crédito por referido NO se otorga aquí en el cliente:
+        // lo procesa el backend (ver server.js → /procesar-referido) para
+        // evitar que alguien se autoregale créditos editando este JS.
+        if (refGuardado) {
+          fetch("/procesar-referido", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nuevoUsuarioUid: user.uid, referidoPorUid: refGuardado }),
+          }).catch((e) => console.warn("No se pudo procesar el referido:", e));
+        }
+        sessionStorage.removeItem("q360_ref");
+      }
+
+      location.href = siguienteDestino;
+    } catch (error) {
+      console.error("Error en login con Google:", error);
+      boton.disabled = false;
+      document.getElementById("estado-carga").style.display = "none";
+      alert("No se pudo iniciar sesión: " + error.message);
+    }
+  });
+</script>
+</body>
+</html>

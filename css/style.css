@@ -1,0 +1,307 @@
+/* ============================================================
+   QUINIELA 360 — Sistema de diseño compartido
+   Motivo: "boleto de quiniela" (ticket picado) + marcador deportivo
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
+:root{
+  --verde-900:#052e1f;
+  --verde-800:#0b3d29;
+  --verde-700:#00432e;
+  --verde-600:#006847;
+  --verde-500:#00854f;
+  --verde-400:#00a86b;
+  --verde-300:#3ddc97;
+  --oro:#ffd166;
+  --oro-fuerte:#f2b705;
+  --rojo:#ff5c5c;
+  --bg:#07160f;
+  --bg-alt:#0d2418;
+  --card:#0f2b1d;
+  --card-borde:rgba(255,255,255,.08);
+  --texto:#f2f7f4;
+  --texto-sec:#9fbcae;
+  --texto-tenue:#6d8b7c;
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:8px;
+  --sombra:0 10px 30px rgba(0,0,0,.35);
+  --font-display:'Oswald', sans-serif;
+  --font-body:'Poppins', sans-serif;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(0,168,107,.18), transparent 45%),
+    radial-gradient(circle at 100% 30%, rgba(255,209,102,.08), transparent 40%),
+    var(--bg);
+  color:var(--texto);
+  -webkit-font-smoothing:antialiased;
+}
+
+a{color:inherit;text-decoration:none;}
+button, input, select{font-family:inherit;}
+
+::selection{background:var(--verde-400);color:#04160e;}
+
+:focus-visible{
+  outline:2px solid var(--oro);
+  outline-offset:2px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+
+/* ---------- Layout base ---------- */
+.contenedor{
+  width:92%;
+  max-width:1000px;
+  margin:0 auto;
+}
+
+.pantalla{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ---------- Header / navegación inferior (app-like) ---------- */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 20px;
+  background:rgba(7,22,15,.85);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--card-borde);
+}
+.topbar .marca{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:20px;
+  letter-spacing:.3px;
+}
+.topbar .marca img{width:32px;height:32px;border-radius:8px;}
+.topbar .marca b{color:var(--oro);}
+
+.saldo-chip{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:var(--card);
+  border:1px solid var(--card-borde);
+  padding:8px 14px;
+  border-radius:999px;
+  font-weight:600;
+  font-size:14px;
+}
+.saldo-chip .num{color:var(--oro);font-family:var(--font-display);font-size:16px;}
+
+.tabbar{
+  position:sticky;
+  bottom:0;
+  z-index:50;
+  display:flex;
+  justify-content:space-around;
+  padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(7,22,15,.92);
+  backdrop-filter:blur(10px);
+  border-top:1px solid var(--card-borde);
+}
+.tabbar a{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  font-size:11px;
+  color:var(--texto-tenue);
+  padding:6px 10px;
+  border-radius:10px;
+  transition:color .2s ease;
+}
+.tabbar a.activo{color:var(--oro);}
+.tabbar a svg{width:22px;height:22px;}
+
+/* ---------- Tarjetas ---------- */
+.tarjeta{
+  background:linear-gradient(180deg, var(--card), rgba(15,43,29,.6));
+  border:1px solid var(--card-borde);
+  border-radius:var(--radius-lg);
+  padding:20px;
+  box-shadow:var(--sombra);
+}
+
+/* ---------- El "boleto" — elemento firma de la marca ---------- */
+.boleto{
+  position:relative;
+  background:linear-gradient(135deg, var(--verde-600), var(--verde-800));
+  border-radius:var(--radius-lg);
+  padding:22px 24px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.boleto::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:repeating-linear-gradient(
+    -35deg,
+    rgba(255,255,255,.05) 0 2px,
+    transparent 2px 14px
+  );
+  z-index:-1;
+}
+.boleto .perforado{
+  position:absolute;
+  top:0; bottom:0;
+  right:118px;
+  border-left:2px dashed rgba(255,255,255,.35);
+}
+.boleto .talon{
+  position:absolute;
+  top:0; right:0; bottom:0;
+  width:118px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  background:rgba(0,0,0,.15);
+}
+.boleto .talon .num{
+  font-family:var(--font-display);
+  font-size:26px;
+  color:var(--oro);
+  font-weight:600;
+}
+.boleto .talon .lbl{font-size:10px;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;}
+.boleto .titulo{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:.1em;color:var(--verde-300);}
+.boleto .cuerpo{margin-top:6px;padding-right:130px;}
+
+/* ---------- Botones ---------- */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:13px 20px;
+  border-radius:var(--radius-sm);
+  border:none;
+  font-weight:600;
+  font-size:15px;
+  cursor:pointer;
+  transition:transform .15s ease, filter .15s ease, background .15s ease;
+}
+.btn:active{transform:scale(.97);}
+.btn-primario{background:linear-gradient(135deg, var(--oro-fuerte), var(--oro));color:#1a1204;}
+.btn-primario:hover{filter:brightness(1.06);}
+.btn-secundario{background:var(--verde-600);color:#fff;}
+.btn-secundario:hover{background:var(--verde-500);}
+.btn-fantasma{background:transparent;border:1px solid var(--card-borde);color:var(--texto);}
+.btn-fantasma:hover{border-color:var(--oro);color:var(--oro);}
+.btn-bloque{width:100%;}
+.btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+/* ---------- Formularios ---------- */
+.campo{margin-bottom:16px;}
+.campo label{display:block;font-size:13px;color:var(--texto-sec);margin-bottom:6px;}
+.campo input, .campo select{
+  width:100%;
+  padding:12px 14px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--card-borde);
+  background:rgba(255,255,255,.04);
+  color:var(--texto);
+  font-size:15px;
+}
+.campo input:focus, .campo select:focus{border-color:var(--verde-400);}
+
+/* ---------- Estado vacío ---------- */
+.estado-vacio{
+  text-align:center;
+  padding:40px 20px;
+  color:var(--texto-sec);
+}
+.estado-vacio .icono{font-size:40px;margin-bottom:10px;}
+.estado-vacio h3{color:var(--texto);margin:0 0 6px;}
+.estado-vacio p{margin:0 0 18px;font-size:14px;}
+
+/* ---------- Utilidades ---------- */
+.titulo-seccion{
+  font-family:var(--font-display);
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  color:var(--texto-sec);
+  margin:28px 0 12px;
+}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.chip{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:600;
+  background:rgba(255,209,102,.12);
+  color:var(--oro);
+}
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:90px;
+  transform:translateX(-50%);
+  background:#12281f;
+  border:1px solid var(--card-borde);
+  color:var(--texto);
+  padding:12px 18px;
+  border-radius:999px;
+  font-size:14px;
+  box-shadow:var(--sombra);
+  z-index:200;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+}
+.toast.mostrar{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(4,12,8,.75);
+  backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:300;
+  padding:20px;
+}
+.overlay[hidden]{display:none;}
+.modal{
+  background:var(--bg-alt);
+  border:1px solid var(--card-borde);
+  border-radius:var(--radius-lg);
+  max-width:380px;
+  width:100%;
+  padding:26px;
+  box-shadow:var(--sombra);
+}
+.modal .paso{display:none;}
+.modal .paso.activo{display:block;}
+.puntos-paso{display:flex;gap:6px;justify-content:center;margin-top:18px;}
+.puntos-paso span{width:7px;height:7px;border-radius:50%;background:var(--card-borde);}
+.puntos-paso span.activo{background:var(--oro);}
+
+@media (max-width:480px){
+  .grid-2{grid-template-columns:1fr;}
+  .boleto .cuerpo{padding-right:110px;}
+}

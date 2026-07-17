@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Pago exitoso</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .pantalla-exito{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;}
+  .check{font-size:56px;margin-bottom:12px;}
+  .pantalla-exito h1{font-size:22px;margin:0 0 8px;}
+  .pantalla-exito p{color:var(--texto-sec);max-width:320px;margin:0 0 26px;}
+</style>
+</head>
+<body>
+
+<div class="pantalla-exito">
+  <div class="check">🎉</div>
+  <h1>¡Pago confirmado!</h1>
+  <p id="mensaje">Tus créditos se están acreditando a tu cuenta. Puede tardar unos segundos.</p>
+  <a class="btn btn-primario" href="interfaz.html">Ir a mi inicio</a>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  // Los créditos NO se suman aquí (esta pantalla es solo un "gracias" visual).
+  // La acreditación real ocurre en el servidor cuando Mercado Pago confirma
+  // el pago vía webhook (ver server.js → /webhook-mercadopago), así que
+  // aunque el usuario cierre esta pantalla antes de tiempo, sus créditos
+  // igual se acreditan.
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) return;
+    const doc = await db.collection("users").doc(user.uid).get();
+    if (doc.exists) {
+      document.getElementById("mensaje").textContent =
+        `Tu saldo actual es de ${doc.data().creditos} créditos.`;
+    }
+  });
+</script>
+</body>
+</html>

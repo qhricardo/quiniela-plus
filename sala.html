@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Mis salas</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .acciones-top{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0 8px;}
+  .lista-salas{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+  .sala-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px;gap:12px;
+  }
+  .sala-item .info h3{margin:0 0 4px;font-size:15px;}
+  .sala-item .info p{margin:0;font-size:12.5px;color:var(--texto-sec);}
+  .sala-item .miembros{font-size:12px;color:var(--texto-tenue);margin-top:4px;}
+  .form-inline{display:flex;gap:8px;}
+  .form-inline input{flex:1;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">🎟️ Mis salas</div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 100px;">
+
+  <div class="acciones-top">
+    <button class="btn btn-primario" id="btn-abrir-crear">+ Crear sala</button>
+    <button class="btn btn-secundario" id="btn-abrir-unirse">Unirme con código</button>
+  </div>
+
+  <div id="contenido-salas">
+    <!-- Se llena por JS: lista de salas o estado vacío -->
+  </div>
+
+</main>
+
+<nav class="tabbar">
+  <a href="interfaz.html">🏠<span>Inicio</span></a>
+  <a href="sala.html" class="activo">🎟️<span>Salas</span></a>
+  <a href="live.html">🔴<span>En vivo</span></a>
+  <a href="compra.html">💳<span>Créditos</span></a>
+</nav>
+
+<!-- Modal: crear sala -->
+<div class="overlay" id="modal-crear" hidden>
+  <div class="modal">
+    <h2 style="margin-top:0">Nueva sala</h2>
+    <form id="form-crear">
+      <div class="campo">
+        <label for="nombre-sala">Nombre de la sala</label>
+        <input type="text" id="nombre-sala" maxlength="30" placeholder="Ej. Quiniela de la oficina" required />
+      </div>
+      <button type="submit" class="btn btn-primario btn-bloque">Crear sala</button>
+      <button type="button" class="btn btn-fantasma btn-bloque" style="margin-top:8px" data-cerrar>Cancelar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: unirse con código -->
+<div class="overlay" id="modal-unirse" hidden>
+  <div class="modal">
+    <h2 style="margin-top:0">Unirme a una sala</h2>
+    <form id="form-unirse">
+      <div class="campo">
+        <label for="codigo-sala">Código de la sala</label>
+        <input type="text" id="codigo-sala" maxlength="8" placeholder="Ej. AB3F9K" required style="text-transform:uppercase" />
+      </div>
+      <button type="submit" class="btn btn-primario btn-bloque">Unirme</button>
+      <button type="button" class="btn btn-fantasma btn-bloque" style="margin-top:8px" data-cerrar>Cancelar</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  let usuarioActual = null;
+
+  requerirSesion((user, datos) => {
+    usuarioActual = user;
+    cargarMisSalas(user.uid);
+  });
+
+  // Abrir / cerrar modales
+  document.getElementById("btn-abrir-crear").onclick = () => (document.getElementById("modal-crear").hidden = false);
+  document.getElementById("btn-abrir-unirse").onclick = () => (document.getElementById("modal-unirse").hidden = false);
+  document.querySelectorAll("[data-cerrar]").forEach(b =>
+    b.onclick = () => b.closest(".overlay").hidden = true
+  );
+
+  function generarCodigo() {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+
+  async function cargarMisSalas(uid) {
+    const cont = document.getElementById("contenido-salas");
+    try {
+      const snap = await db.collection("salas").where("miembros", "array-contains", uid).get();
+      if (snap.empty) {
+        cont.innerHTML = `
+          <div class="estado-vacio tarjeta">
+            <div class="icono">🎟️</div>
+            <h3>Todavía no estás en ninguna sala</h3>
+            <p>Crea una sala para tu grupo o pide el código a un amigo que ya juegue.</p>
+            <button class="btn btn-primario" onclick="document.getElementById('modal-crear').hidden=false">+ Crear mi primera sala</button>
+          </div>`;
+        return;
+      }
+      let html = `<div class="lista-salas">`;
+      snap.forEach(doc => {
+        const s = doc.data();
+        html += `
+          <a class="sala-item tarjeta" href="guardar-pronostico.html?sala=${doc.id}">
+            <div class="info">
+              <h3>${s.nombre}</h3>
+              <p>Código: <b>${s.codigo}</b></p>
+              <div class="miembros">${(s.miembros || []).length} jugador(es)</div>
+            </div>
+            <span class="chip">Entrar →</span>
+          </a>`;
+      });
+      html += `</div>`;
+      cont.innerHTML = html;
+    } catch (err) {
+      console.error(err);
+      cont.innerHTML = `<div class="estado-vacio tarjeta"><p>No se pudieron cargar tus salas. Intenta de nuevo.</p></div>`;
+    }
+  }
+
+  document.getElementById("form-crear").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById("nombre-sala").value.trim();
+    if (!nombre) return;
+    try {
+      const codigo = generarCodigo();
+      await db.collection("salas").add({
+        nombre,
+        codigo,
+        creadaPor: usuarioActual.uid,
+        miembros: [usuarioActual.uid],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      document.getElementById("modal-crear").hidden = true;
+      mostrarToast("Sala creada 🎉");
+      cargarMisSalas(usuarioActual.uid);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("No se pudo crear la sala");
+    }
+  });
+
+  document.getElementById("form-unirse").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const codigo = document.getElementById("codigo-sala").value.trim().toUpperCase();
+    if (!codigo) return;
+    try {
+      const snap = await db.collection("salas").where("codigo", "==", codigo).limit(1).get();
+      if (snap.empty) {
+        mostrarToast("No existe una sala con ese código");
+        return;
+      }
+      const docRef = snap.docs[0].ref;
+      await docRef.update({
+        miembros: firebase.firestore.FieldValue.arrayUnion(usuarioActual.uid),
+      });
+      document.getElementById("modal-unirse").hidden = true;
+      mostrarToast("¡Te uniste a la sala!");
+      cargarMisSalas(usuarioActual.uid);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("No se pudo procesar el código");
+    }
+  });
+</script>
+</body>
+</html>

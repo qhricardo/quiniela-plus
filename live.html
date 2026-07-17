@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — En vivo</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .partido-vivo{padding:16px;margin-bottom:12px;}
+  .partido-vivo .encabezado{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .partido-vivo .minuto{font-size:12px;color:var(--verde-300);font-weight:600;display:flex;align-items:center;gap:5px;}
+  .punto-vivo{width:7px;height:7px;border-radius:50%;background:var(--rojo);animation:parpadeo 1.4s infinite;}
+  @keyframes parpadeo{50%{opacity:.25}}
+  .marcador-vivo{display:flex;align-items:center;justify-content:center;gap:20px;}
+  .marcador-vivo .equipo{display:flex;flex-direction:column;align-items:center;gap:6px;width:100px;}
+  .marcador-vivo .equipo img{width:34px;height:34px;object-fit:contain;}
+  .marcador-vivo .equipo span{font-size:12.5px;text-align:center;}
+  .marcador-vivo .goles{font-family:var(--font-display);font-size:28px;font-weight:600;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">🔴 En vivo</div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 100px;">
+  <div id="lista-vivo">
+    <div class="estado-vacio tarjeta">
+      <div class="icono">⏳</div>
+      <p>Buscando partidos en curso…</p>
+    </div>
+  </div>
+</main>
+
+<nav class="tabbar">
+  <a href="interfaz.html">🏠<span>Inicio</span></a>
+  <a href="sala.html">🎟️<span>Salas</span></a>
+  <a href="live.html" class="activo">🔴<span>En vivo</span></a>
+  <a href="compra.html">💳<span>Créditos</span></a>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  requerirSesion(() => {});
+
+  function pintarPartidos(partidos) {
+    const cont = document.getElementById("lista-vivo");
+    if (!partidos || !partidos.length) {
+      cont.innerHTML = `<div class="estado-vacio tarjeta"><div class="icono">😴</div><h3>No hay partidos en vivo ahora</h3><p>Vuelve el día del próximo partido de tu sala.</p></div>`;
+      return;
+    }
+    cont.innerHTML = partidos.map(p => `
+      <div class="tarjeta partido-vivo" data-id="${p.id}">
+        <div class="encabezado">
+          <span class="minuto"><span class="punto-vivo"></span>Min. ${p.minuto}'</span>
+          <span class="chip">${p.competencia || "Liga MX"}</span>
+        </div>
+        <div class="marcador-vivo">
+          <div class="equipo"><img src="${p.local.escudo}" alt=""><span>${p.local.nombre}</span></div>
+          <div class="goles">${p.golesLocal} - ${p.golesVisita}</div>
+          <div class="equipo"><img src="${p.visitante.escudo}" alt=""><span>${p.visitante.nombre}</span></div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Carga inicial vía HTTP (rápido, sin esperar el socket)
+  fetch("/api/partidos-vivo").then(r => r.json()).then(pintarPartidos).catch(() => {
+    document.getElementById("lista-vivo").innerHTML =
+      `<div class="estado-vacio tarjeta"><p>No se pudo conectar con el marcador en vivo.</p></div>`;
+  });
+
+  // Actualizaciones en tiempo real por Socket.io (goles, minuto)
+  try {
+    const socket = io();
+    socket.on("partidos-actualizados", pintarPartidos);
+  } catch (e) {
+    console.warn("Socket.io no disponible, se usará solo el estado inicial.", e);
+  }
+</script>
+</body>
+</html>

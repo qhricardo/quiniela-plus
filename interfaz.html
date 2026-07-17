@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela 360 — Inicio</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .accesos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}
+  .acceso{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:16px 8px;text-align:center;
+  }
+  .acceso .icono{font-size:24px;}
+  .acceso span.txt{font-size:12px;color:var(--texto-sec);}
+
+  .invitar{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .invitar .texto h3{margin:0 0 4px;font-size:15px;}
+  .invitar .texto p{margin:0;font-size:13px;color:var(--texto-sec);max-width:280px;}
+  .invitar .acciones{display:flex;gap:8px;}
+  .invitar .acciones .btn{padding:10px 14px;font-size:13px;}
+
+  #tabla-liga{width:100%;border-collapse:collapse;text-align:center;font-size:13px;}
+  #tabla-liga th{background:linear-gradient(90deg, var(--verde-500), var(--verde-700));color:#fff;padding:10px;font-weight:600;text-transform:uppercase;white-space:nowrap;}
+  #tabla-liga td{padding:9px;border-bottom:1px solid var(--card-borde);white-space:nowrap;}
+  .table-scroll{width:100%;overflow-x:auto;border-radius:var(--radius-sm);}
+
+  #noticias-lista{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
+  .noticia{display:flex;gap:12px;padding:12px;border-radius:var(--radius-md);background:rgba(255,255,255,.03);}
+  .noticia img{width:76px;height:76px;object-fit:cover;border-radius:10px;flex:none;}
+  .noticia h4{margin:0 0 4px;font-size:13.5px;line-height:1.3;}
+  .noticia a{font-size:12px;color:var(--oro);font-weight:600;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca"><img src="img/logo.png" alt="" onerror="this.style.display='none'">Quiniela <b>360</b></div>
+  <div class="saldo-chip">🪙 <span class="num" id="saldo-creditos">—</span></div>
+</header>
+
+<main class="contenedor" style="padding:20px 0 100px;">
+
+  <!-- Boleto: saldo de créditos, el elemento de marca de la app -->
+  <div class="boleto">
+    <div class="perforado"></div>
+    <div class="cuerpo">
+      <div class="titulo">Tus créditos</div>
+      <p style="margin:4px 0 0;font-size:14px;color:var(--texto-sec)" id="saludo-usuario">Hola…</p>
+    </div>
+    <div class="talon">
+      <div class="num" id="saldo-creditos-grande">—</div>
+      <div class="lbl">créditos</div>
+    </div>
+  </div>
+
+  <!-- Accesos rápidos -->
+  <div class="accesos">
+    <a class="acceso tarjeta" href="sala.html">
+      <span class="icono">🎟️</span><span class="txt">Mis salas</span>
+    </a>
+    <a class="acceso tarjeta" href="live.html">
+      <span class="icono">🔴</span><span class="txt">En vivo</span>
+    </a>
+    <a class="acceso tarjeta" href="resultados.html">
+      <span class="icono">📊</span><span class="txt">Resultados</span>
+    </a>
+  </div>
+
+  <!-- Invitar amigos: la palanca de crecimiento, ahora visible -->
+  <div class="tarjeta invitar">
+    <div class="texto">
+      <h3>🎁 Invita amigos, gana créditos</h3>
+      <p>Por cada amigo que entre con tu link, ganas 1 crédito.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn btn-secundario" id="btn-whatsapp">WhatsApp</button>
+      <button class="btn btn-fantasma" id="btn-copiar-link">Copiar link</button>
+    </div>
+  </div>
+
+  <div class="titulo-seccion">Tabla general — Liga MX</div>
+  <div class="tarjeta">
+    <div class="table-scroll">
+      <table id="tabla-liga">
+        <thead>
+          <tr><th>Pos</th><th style="text-align:left">Club</th><th>JJ</th><th>JG</th><th>JE</th><th>JP</th><th>Pts</th></tr>
+        </thead>
+        <tbody id="tabla-liga-body">
+          <tr><td colspan="7">Cargando tabla oficial…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="titulo-seccion">Noticias Liga MX</div>
+  <div id="noticias-lista">
+    <p style="color:var(--texto-sec);font-size:13px;">Cargando noticias…</p>
+  </div>
+
+</main>
+
+<nav class="tabbar">
+  <a href="interfaz.html" class="activo">🏠<span>Inicio</span></a>
+  <a href="sala.html">🎟️<span>Salas</span></a>
+  <a href="live.html">🔴<span>En vivo</span></a>
+  <a href="compra.html">💳<span>Créditos</span></a>
+</nav>
+
+<!-- Onboarding: solo la primera vez que el usuario entra -->
+<div class="overlay" id="onboarding" hidden>
+  <div class="modal">
+    <div class="paso activo">
+      <h2 style="margin-top:0">🎟️ 1. Únete a una sala</h2>
+      <p style="color:var(--texto-sec)">Crea tu propia sala o entra con el código que te compartió un amigo.</p>
+    </div>
+    <div class="paso">
+      <h2 style="margin-top:0">⚽ 2. Pronostica</h2>
+      <p style="color:var(--texto-sec)">Antes de que arranque cada partido, manda tu marcador. Ya tienes 10 créditos de regalo para empezar.</p>
+    </div>
+    <div class="paso">
+      <h2 style="margin-top:0">🏆 3. Gana y presume</h2>
+      <p style="color:var(--texto-sec)">Acierta resultados, gana créditos y sube en la tabla de tu sala.</p>
+    </div>
+    <div class="puntos-paso"><span class="activo"></span><span></span><span></span></div>
+    <button class="btn btn-primario btn-bloque" style="margin-top:20px" id="onboarding-siguiente">Siguiente</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script>
+  requerirSesion((user, datos) => {
+    document.getElementById("saludo-usuario").textContent =
+      `Hola, ${(datos && datos.apodo) || user.displayName || "jugador"} 👋`;
+    document.getElementById("saldo-creditos-grande").textContent = (datos && datos.creditos) ?? 0;
+
+    const link = obtenerLinkInvitacion(user.uid);
+    document.getElementById("btn-copiar-link").addEventListener("click", () => copiarAlPortapapeles(link));
+    document.getElementById("btn-whatsapp").addEventListener("click", () => {
+      const texto = encodeURIComponent(`⚽ Únete a mi quiniela de la Liga MX y gana créditos: ${link}`);
+      window.open(`https://wa.me/?text=${texto}`, "_blank");
+    });
+
+    mostrarOnboardingSiEsNuevo(datos);
+  });
+
+  // ─────────── Tabla de posiciones REAL (vía api.php, no datos inventados) ───────────
+  async function cargarTabla() {
+    try {
+      const res = await fetch("/api/tabla");
+      const data = await res.json();
+      const equipos = data.standings || data.data?.standings || data;
+      const filas = Array.isArray(equipos) ? equipos : equipos.standings;
+      let html = "";
+      filas.slice(0, 10).forEach((eq, i) => {
+        html += `<tr>
+          <td>${eq.position ?? i + 1}</td>
+          <td style="text-align:left;font-weight:600">${eq.team?.name ?? eq.name ?? ""}</td>
+          <td>${eq.stats?.gamesPlayed ?? eq.games_played ?? "-"}</td>
+          <td>${eq.stats?.gamesWon ?? eq.wins ?? "-"}</td>
+          <td>${eq.stats?.gamesDrawn ?? eq.draws ?? "-"}</td>
+          <td>${eq.stats?.gamesLost ?? eq.losses ?? "-"}</td>
+          <td style="font-weight:700;color:var(--oro)">${eq.stats?.points ?? eq.points ?? "-"}</td>
+        </tr>`;
+      });
+      document.getElementById("tabla-liga-body").innerHTML = html || `<tr><td colspan="7">Sin datos disponibles ahora mismo.</td></tr>`;
+    } catch (err) {
+      console.error("Error cargando tabla:", err);
+      document.getElementById("tabla-liga-body").innerHTML =
+        `<tr><td colspan="7">No se pudo cargar la tabla en este momento. Intenta más tarde.</td></tr>`;
+    }
+  }
+
+  // ─────────── Noticias vía /api/noticias (Express, con caché — ver server.js) ───────────
+  async function cargarNoticias() {
+    try {
+      const res = await fetch("/api/noticias");
+      const items = await res.json();
+      if (!items.length) throw new Error("vacío");
+      document.getElementById("noticias-lista").innerHTML = items.map(n => `
+        <a class="noticia" href="${n.link}" target="_blank" rel="noopener">
+          ${n.img ? `<img src="${n.img}" alt="">` : ""}
+          <div><h4>${n.title}</h4><span>Leer noticia completa →</span></div>
+        </a>
+      `).join("");
+    } catch (err) {
+      document.getElementById("noticias-lista").innerHTML =
+        `<p style="color:var(--texto-sec);font-size:13px;">No hay noticias disponibles en este momento.</p>`;
+    }
+  }
+
+  cargarTabla();
+  cargarNoticias();
+</script>
+</body>
+</html>
